@@ -1,9 +1,10 @@
+using Duende.Bff.Yarp;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
 
 var builder = WebApplication.CreateBuilder(args);
-
-// Add services to the container.
-builder.Services.AddRazorPages();
+builder.Services.AddBff().AddRemoteApis(); ;
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultScheme = "Cookies";
@@ -14,7 +15,7 @@ builder.Services.AddAuthentication(options =>
     {
         options.Authority = "https://localhost:5001";
 
-        options.ClientId = "web";
+        options.ClientId = "bff";
         options.ClientSecret = "secret";
         options.ResponseType = "code";
 
@@ -23,7 +24,6 @@ builder.Services.AddAuthentication(options =>
         options.Scope.Clear();
         options.Scope.Add("openid");
         options.Scope.Add("profile");
-        options.Scope.Add("offline_access");
         options.Scope.Add("api1");
         options.Scope.Add("color");
 
@@ -34,25 +34,44 @@ builder.Services.AddAuthentication(options =>
 
         options.SaveTokens = true;
     });
-
+builder.Services.AddAuthorization();
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
-if (!app.Environment.IsDevelopment())
+if (app.Environment.IsDevelopment())
 {
-    app.UseExceptionHandler("/Error");
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
-    app.UseHsts();
+    app.UseDeveloperExceptionPage();
 }
 
-app.UseHttpsRedirection();
+app.UseDefaultFiles();
 app.UseStaticFiles();
 
 app.UseRouting();
-
 app.UseAuthentication();
+
+app.UseBff();
+
 app.UseAuthorization();
 
-app.MapRazorPages().RequireAuthorization();
+[Authorize]
+static IResult LocalIdentityHandler(ClaimsPrincipal user)
+{
+    var name = user.FindFirst("name")?.Value ?? user.FindFirst("sub")?.Value;
+    return Results.Json(new { message = "Local API Success!", user = name });
+}
+
+app.UseEndpoints(endpoints =>
+{
+    endpoints.MapBffManagementEndpoints();
+
+    // Uncomment this for Controller support
+    // endpoints.MapControllers()
+    //     .AsBffApiEndpoint();
+
+    endpoints.MapGet("/local/identity", LocalIdentityHandler)
+        .AsBffApiEndpoint();
+
+    endpoints.MapRemoteBffApiEndpoint("/remote", "https://localhost:6001")
+        .RequireAccessToken(Duende.Bff.TokenType.User);
+});
 
 app.Run();

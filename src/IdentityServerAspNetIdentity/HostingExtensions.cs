@@ -34,8 +34,9 @@ internal static class HostingExtensions
             .AddInMemoryIdentityResources(Config.IdentityResources)
             .AddInMemoryApiScopes(Config.ApiScopes)
             .AddInMemoryClients(Config.Clients)
-            .AddAspNetIdentity<ApplicationUser>();
-        
+            .AddAspNetIdentity<ApplicationUser>()
+            .AddProfileService<CustomProfileService>();
+
         builder.Services.AddAuthentication()
             .AddGoogle(options =>
             {
@@ -44,8 +45,8 @@ internal static class HostingExtensions
                 // register your IdentityServer with Google at https://console.developers.google.com
                 // enable the Google+ API
                 // set the redirect URI to https://localhost:5001/signin-google
-                options.ClientId = "copy client ID from Google here";
-                options.ClientSecret = "copy client secret from Google here";
+                options.ClientId = "48342954813-ik05p6qateqbhtrntfenros70gn2ab20.apps.googleusercontent.com";
+                options.ClientSecret = "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";
             });
 
         return builder.Build();
